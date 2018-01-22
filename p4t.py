@@ -20,18 +20,19 @@ sns.set(rc={'font.sans-serif': [u'Microsoft YaHei', u'Arial',
 mpl.style.use('ggplot')
 
 
-def pareto(input_df, label_col, data_col):
-    plt.figure(figsize=(30, 26))
+def pareto(label_array, data_array, savepath=""):
+    # plt.figure(figsize=(30, 26))
+    plt.figure()
     df = pd.DataFrame()
-    df["data"] = input_df[data_col]
+    df["data"] = data_array
+    df.index = label_array
     df = df.sort_values(by="data", ascending=False)
     df["percent"] = df["data"].cumsum() / df["data"].sum() * 100
-    df.index = input_df[label_col]
 
     # --- plot code ---
     df["percent"].plot(color='r', secondary_y=True,
-                       style='-o', linewidth=1, rot=17)
-    df["data"].plot(kind='bar', color="b", align="center", rot=17)
+                       style='-o', linewidth=1, rot=90)
+    df["data"].plot(kind='bar', color="b", align="center", rot=90)
 
     x = np.arange(len(df.index))
     y = df["percent"]
@@ -49,7 +50,7 @@ def pareto(input_df, label_col, data_col):
     if __name__ == '__main__':
         plt.show()  # for test
     else:
-        plt.savefig("")
+        plt.savefig(savepath)
         plt.close(0)
 
 
@@ -117,8 +118,26 @@ def test():
         30.949
 
     ]
-    pareto(data, "label", "data")
+    pareto(data["label"], data["data"])
+
+
+def test2():
+    data = pd.DataFrame()
+    data["label"] = [
+        "M610L和M510L单边浪",
+        "Q500C批量浪形",
+        "其它"
+
+    ]
+
+    data["data"] = [
+        38049,
+        7614.15,
+        5000
+
+    ]
+    pareto(data["label"], data["data"])
 
 
 if __name__ == '__main__':
-    test()
+    test2()

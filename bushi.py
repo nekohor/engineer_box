@@ -29,7 +29,7 @@ class Templet():
 
     def put(self, doc, token, kwdict):
         # 分级标题
-        for i in range(3):
+        for i in range(5):
             level = i + 1
             if token.startswith('<h%d>' % level):
                 words = token[4:-5].strip()
@@ -49,7 +49,7 @@ class Templet():
             exec("doc.add_picture('%s', width=Inches(5.2))" % words)
         else:
             pass
-            # print("Don't understand tag : %s" % token
+            # print("Don't understand tag : %s" % token)
 
     def render(self, doc, kwdict):
         self.render_result = self.template.render(kwdict)

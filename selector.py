@@ -29,14 +29,16 @@ def grade_selection(grade_belongs):
 
 # ====================config============================
 month_start = 201701
-month_end = 201705
+month_end = 201712
 
-line_list = [2250]
+line_list = [2250, 1580]
 selector_dict = {
-    "钢种": ["Q235B"],
+    "钢种": ["M750JJ"],
     # "SPHC-YS1"
-    "目标厚度": [3.75]
+    # "目标厚度": [3.75]
 }
+
+to_file_name = 'e:/005统计/20180117 Q500C和M750JJ统计/{line}_{grade}.xlsx'
 
 # =======================logic=========================
 
@@ -55,4 +57,6 @@ for line in line_list:
         df_all = df_all.append(df)
         print("complete! %d" % month)
 
-df_all.to_excel('e:/analysis/thk/q235b_375.xlsx')
+    df_all.to_excel(
+        to_file_name.format(line=line,
+                            grade=selector_dict["钢种"]))
