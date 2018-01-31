@@ -1,132 +1,260 @@
-# -*- coding: utf-8 -*-
+# coding:utf-8
 import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib
 import numpy as np
-from dateutil.parser import parse
-import datetime
+import os
+import sys
+# import seaborn as sns  # 学院派风格的话，这个用不到
+import docx   # 注意是python-docx
+from docx.enum.table import WD_TABLE_ALIGNMENT
+from docx.shared import Inches
+# matplotlib.style.use('ggplot')
+
+plt.rcParams["font.sans-serif"] = ["Microsoft Yahei"]
+plt.rcParams["axes.unicode_minus"] = False
+
+# sns.set(color_codes=True)
+# sns.set(rc={'font.family': [u'Microsoft YaHei']})
+# sns.set(rc={'font.sans-serif': [u'Microsoft YaHei', u'Arial',
+#                                 u'Liberation Sans', u'Bitstream Vera Sans',
+#                                 u'sans-serif']})
 
 
-def composite_data(line, subject, MONTH_START, MONTH_END):
-    df_all = pd.DataFrame()
-    month_list = list(range(MONTH_START, MONTH_END + 1))
-    print(month_list)
-    for month in month_list:
-        file_name = "d:/data_collection_monthly/%d/%d/%d_%d%s.xlsx" % (
-            line, month, month, line, subject)
-        df = pd.read_excel(file_name)
-        df["月份"] = month
-        # df = df[col_list]
-        df.index = list(range(df.shape[0]))
-        # if month == MONTH_START:
-        #     df_all = df
-        # else:
-        #     df_all = df_all.append(df)
-        df_all = df_all.append(df)
-    df_all.index = list(range(df_all.shape[0]))
-    return df_all
+def frc(std, side, how):
+    return ("L_{std}H_{side}RLFCFBK{how}"
+            .format(std=std, side=side, how=how))
 
 
-def selection(df, df_selection, col):
-
-    selection = list(df_selection[col])
-    df = df.loc[df[col].isin(selection)]
-    df.index = list(range(df.shape[0]))
-    return df
+def pos(std, side, access):
+    return ("L_{std}H_{side}{access}POSFBK"
+            .format(std=std, side=side, access=access))
 
 
-def silicon_selection(df):
-    steel_grade_catego = pd.read_excel('e:/stat/data/used_grade.xlsx')
-    refer = list(steel_grade_catego[u'硅钢'])
-    df = df.loc[(df[u'钢种'].isin(refer))]
-    df.index = list(range(df.shape[0]))
-    return df
+def slp(side, access, how, times):
+    return ("k_{side}_{access}_{how}_{times}"
+            .format(side=side, access=access, how=how, times=times))
 
 
-def add_shift(df):
-    df.index = list(range(df.shape[0]))
-    shiftArray = ("白", "白", "小", "小", "休", "大", "大", "休")
-    startTime = datetime.datetime(2015, 1, 1, 0, 0)
-    for i in range(df.shape[0]):
-        print(df.loc[i, "热卷号"] + " " + str(i))
-        if type(df.loc[i, "结束日期"]) == float:
-            continue
-
-        tmp = []
-        tmp.append(df.loc[i, "结束日期"])
-        tmp.append(df.loc[i, "结束时间"])
-        df.loc[i, "生产时间"] = " ".join(tmp)
-
-        productTimeArray = parse(str(df.loc[i, "生产时间"]))
-
-        if productTimeArray.hour < 8:
-            df.loc[i, "班次"] = "大"
-        elif (productTimeArray.hour >= 8) & (productTimeArray.hour < 16):
-            df.loc[i, "班次"] = "白"
-        else:
-            df.loc[i, "班次"] = "小"
-
-        aimTime = datetime.datetime(productTimeArray.year,
-                                    productTimeArray.month,
-                                    productTimeArray.day)
-
-        timeDelta = aimTime - startTime
-        days = int(timeDelta.days)
-        arrayPosition = days % 8
-
-        duty = {"甲": 0, "乙": 0, "丙": 0, "丁": 0}
-
-        duty["甲"] = shiftArray[(arrayPosition - 1) % 8]
-        duty["乙"] = shiftArray[(arrayPosition + 1) % 8]
-        duty["丙"] = shiftArray[(arrayPosition + 3) % 8]
-        duty["丁"] = shiftArray[(arrayPosition + 5) % 8]
-
-        duty = dict((v, k) for k, v in duty.items())
-        df.loc[i, "班别"] = duty[df.loc[i, "班次"]]
+def box_col(std, the_date):
+    return ("{std}_{the_date}"
+            .format(std=std, the_date=the_date))
 
 
-def parse_time(num):
-    year = int(num // 1e10)
-    month = int(num // 1e8 - num // 1e10 * 1e2)
-    day = int(num // 1e6 - num // 1e8 * 1e2)
-    hour = int(num // 1e4 - num // 1e6 * 1e2)
-    minute = int(num // 1e2 - num // 1e4 * 1e2)
-    second = int(num - num // 1e2 * 1e2)
-    return datetime(year, month, day, hour, minute, second)
+def progressbar(i):
+    """ 小型的进度条 """
+    sys.stdout.write('第{0}机架计算中！- 总共7机架\r'.format(i + 1))
+    sys.stdout.flush()
 
 
-# Binning:
-def binning(col, cut_points, labels=None):
-    # Define min and max values:
-    minval = col.min()
-    maxval = col.max()
-
-    # create list by adding min and max to cut_points
-    break_points = [minval] + cut_points + [maxval]
-
-    # if no labels provided, use default labels 0 ... (n-1)
-    if not labels:
-        labels = list(range(len(cut_points) + 1))
-
-    # Binning using cut function of pandas
-    colBin = pd.cut(col, bins=break_points, labels=labels, include_lowest=True)
-    return colBin
-
-# #Binning age:
-# cut_points = [90,140,190]
-# labels = ["low","medium","high","very high"]
-# data["LoanAmount_Bin"] = binning(data["LoanAmount"], cut_points, labels)
-# print pd.value_counts(data["LoanAmount_Bin"], sort=False)
+def fst_idx(s, level_line):
+    return s.loc[s > level_line].sort_index().index[0]
 
 
-# df_selection = pd.read_excel("e:/大缺陷分析/板形质量异议/热卷信息.xlsx")
-# df = composite_data(2250, "excel", MONTH_START, MONTH_END)
-# df = selection(df, df_selection, "热卷号")
-# print(df)
-# df.to_excel("e:/boom/df_need.xlsx")
+def lst_idx(s):
 
-# df = pd.read_excel("e:/boom/df_need.xlsx")
-# add_shift(df)
-# df.to_excel("e:/boom/df_need.xlsx")
+    return s.sort_values().index[-1]
 
-# for line in line_list:
-#     df = composite_data(line, "excel", MONTH_START, MONTH_END)
-#     df.to_excel("e:/beike/raw_excel_data%d.xlsx" % (line))
+
+def cut(df, s, level_line):
+    if s.loc[s > level_line].shape[0] == 0:
+        return df.loc[s > level_line]
+    else:
+        # print(s[s.loc[s > level_line].index[0]],
+        #      s[s.sort_values().index[-1]])
+        return df.loc[(s.index >= fst_idx(s, level_line)) &
+                      (s.index < lst_idx(s))]
+
+
+def add_one_table(document, summary):
+    row_num = len(summary.index) + 1
+    col_num = len(summary.columns) + 1
+    print(row_num, col_num)
+    table = document.add_table(rows=row_num, cols=col_num)
+    # 表格第一行为DataFrame的列名
+    hdr_cells = table.rows[0].cells
+    side_cells = table.columns[0].cells
+    i = 1
+    for val in summary.columns:
+        hdr_cells[i].text = str(val)
+        i = i + 1
+
+    i = 1
+    for val in summary.index:
+        side_cells[i].text = str(val)
+        i = i + 1
+
+    i = 1
+    for col in summary.columns:
+        j = 1
+        for idx in summary.index:
+            table.columns[i].cells[j].text = (
+                str(summary.loc[idx, col])
+                # 注意cell的text只能接收字符串
+            )
+            j = j + 1
+        i = i + 1
+    table.alignment = WD_TABLE_ALIGNMENT.CENTER
+    table.style = "Table Grid"
+    document.add_paragraph("")
+
+
+# --- setup para ---
+# data directory
+root_dir = "../data/零调数据"
+
+date_num_list = [-1, -2, -3]
+times_id_list = ["A", "B", "C", "D", "E", "F"]
+std_list = ["F1", "F2", "F3", "F4", "F5", "F6", "F7"]
+side_list = ["OS", "DS"]
+access_list = ["ENT", "EXT"]
+how_list = ["LC", "PT"]
+level_line = 4000   # 基准线
+max_line = 8000     # 卡住轧制力上限
+total_line = 3000   # 保持率计算
+
+last_num = -1
+last_date = os.listdir(root_dir)[last_num]
+
+box_data = pd.DataFrame()
+
+for date_num in date_num_list:
+    summary = pd.DataFrame()
+    the_date = os.listdir(root_dir)[date_num]
+    data_dir = "/".join([root_dir, the_date])
+    for times_id in times_id_list:
+        # print(times_id)
+        file_name = [x for x in os.listdir(data_dir) if times_id in x][0]
+        df_origin = pd.read_csv("/".join([data_dir, file_name]))
+        for std in std_list:
+            # selected series 1@
+            # selected_s = df[frc(std, "OS", "LC")]
+            # df = cut(df, selected_s, level_line)
+
+            # 李轶伦筛选的时候仅筛选各个机架后，就开始提取数据，不是等到筛选完两侧、前后以及LC、PT后再选择数据集。
+            df = df_origin.loc[
+                (df_origin[frc(std, "OS", "LC")] > level_line) &
+                (df_origin[frc(std, "OS", "LC")] < max_line)]
+            # 牢记
+            for side in side_list:
+                for access in access_list:
+                    for how in how_list:
+                        # selected series 2@
+                        # selected_s = df[frc(std, side, how)]
+                        # df = cut(df, selected_s, level_line)
+
+                        # df = df.loc[df[frc(std, side, how)] > level_line]
+                        pos_size = df[pos(std, side, access)].shape[0]
+                        frc_size = df[frc(std, side, how)].shape[0]
+                        if ((pos_size != 0) and (frc_size != 0) and
+                                (pos_size == frc_size)):
+                            summary.loc[std,
+                                        slp(side, access, how, times_id)] = (
+                                np.polyfit(df[pos(std, side, access)],
+                                           df[frc(std, side, how)], 1)[0]
+                            )
+                        else:
+                            summary.loc[std, slp(
+                                side, access, how, times_id)] = np.nan
+
+    if not os.path.exists("../data/inter/{}".format(the_date)):
+        os.makedirs("../data/inter/{}".format(the_date))
+    if not os.path.exists("../data/pic/{}".format(the_date)):
+        os.makedirs("../data/pic/{}".format(the_date))
+    summary.to_excel("../data/inter/{}/中间计算结果.xlsx".format(the_date))
+
+    plot_data = pd.DataFrame()
+    for how in how_list:
+        for std in std_list:
+            the_col_list = [x for x in summary.columns if how in x]
+            the_series = summary.loc[std, the_col_list]
+            the_series = the_series.loc[the_series > 1000]
+            the_series = the_series.loc[the_series < 4000]
+            if the_series.shape[0] != 0:
+                plot_data.loc[std, how] = round(
+                    the_series.mean() / total_line * 100, 2)
+            else:
+                plot_data.loc[std, how] = np.nan
+    plot_data.to_excel("../data/inter/{}/lc_pt保持率.xlsx".format(the_date))
+    # --- plt.fig ---
+    plt.figure(0)
+    plot_data.plot(kind="bar", color=['grey', 'w'])
+    plt.title = "LC和PT刚度比较"
+    plt.xlabel("机架")
+    plt.ylabel("刚度保持率%")
+    plt.legend(loc='lower left')
+
+    x = np.arange(len(plot_data.index))
+    y1 = plot_data["LC"]
+    y2 = plot_data["PT"]
+    print(y1, y2)
+    for a, b in zip(x, y1):
+        plt.text(a - 0.3, b + 0.05, '%.1f' %
+                 b, ha='center', va='bottom', fontsize=10)
+    for a, b in zip(x, y2):
+        plt.text(a + 0.3, b + 0.05, '%.1f' %
+                 b, ha='center', va='bottom', fontsize=10)
+    plt.savefig("../data/pic/{}/bar_plot.png".format(the_date))
+    plt.close(0)
+
+    # 全机架保持率计算
+    how = "LC"
+    for times_id in times_id_list:
+        for std in std_list:
+            the_col_list = [
+                x for x in summary.columns if times_id in x if how in x]
+            the_series = summary.loc[std, the_col_list]
+            the_series = the_series.loc[the_series > 0.001]
+            if the_series.shape[0] != 0:
+                box_data.loc[times_id, box_col(std, the_date)] = round(
+                    the_series.mean() / total_line * 100, 2)
+            else:
+                box_data.loc[times_id, box_col(std, the_date)] = np.nan
+                # or 0
+
+box_data.to_excel("../data/inter/{}/box计算结果.xlsx".format(last_date))
+
+color_dict = dict(boxes='k', whiskers='k',
+                  medians='k', caps='k')
+
+for std in std_list:
+    the_col_list = [
+        x for x in box_data.columns if std in x]
+    plt.figure(0)
+    box_data[the_col_list].sort_index(
+        axis=1).plot(kind="box", color="k")
+    # print(std)
+    plt.title = "{}机架刚度保持率".format(std)
+    plt.xlabel("日期时间")
+    plt.ylabel("刚度保持率%")
+    plt.savefig("../data/pic/{}/box_plot_{}.png".format(last_date, std))
+    plt.close(0)
+
+doc = docx.Document("base.docx")
+doc.add_paragraph(
+    "刚度评价（{y}年{m}月{d}日）黑白版".format(
+        y=str(last_date)[:4],
+        m=str(last_date)[4:6],
+        d=str(last_date)[6:]
+    )
+)
+doc.paragraphs[-1].style = "Title"
+
+doc.add_paragraph("    LC和PT刚度如下图所示。")
+doc.add_picture("../data/pic/{}/bar_plot.png".format(last_date),
+                width=Inches(6.2))
+doc.add_paragraph("    LC和PT刚度保持率的数据如下表所示。")
+doc.add_paragraph("表  LC和PT刚度保持率")
+doc.paragraphs[-1].alignment = WD_TABLE_ALIGNMENT.CENTER
+add_one_table(doc, pd.read_excel(
+    "../data/inter/{}/lc_pt保持率.xlsx".format(last_date)))
+
+for std in std_list:
+    doc.add_paragraph("   {}机架近3周刚度保持率如下图所示。".format(std))
+    doc.add_picture(
+        "../data/pic/{}/box_plot_{}.png".format(last_date, std),
+        width=Inches(6.2))
+
+if not os.path.exists("../data/result"):
+    os.makedirs("../data/result")
+doc.save("../data/result/轧机刚度评价{}.docx".format(last_date))
