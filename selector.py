@@ -23,26 +23,36 @@ sns.set(rc={'font.sans-serif': [u'Microsoft YaHei', u'Arial',
 
 def grade_selection(grade_belongs):
     df_selection = pd.read_excel('e:/stat/data/used_grade.xlsx')
-    selection = list(df_selection[grade_belongs])
-    return selection
+    return list(df_selection[grade_belongs])
+
+
+def generate_month(start_month, end_month):
+    y = start_month // 100
+    m = start_month % 100
+    month_list = []
+    while (y * 100 + m) <= end_month:
+        month_list.append((y * 100 + m))
+        m = m + 1
+        if m > 12:
+            y = y + 1
+            m = 1
+    return month_list
 
 
 # ====================config============================
-month_start = 201701
-month_end = 201712
-
-line_list = [2250, 1580]
+line_list = [1580]
 selector_dict = {
-    "钢种": ["M750JJ"],
+    "板坯钢种": ["MBRYT34506", "MBRYT34515", "MBRYT50015", "MBRYT50016",
+             "MBRYT60022", "MBRYT65001", "MBRYT70001", "MBRYT70002"]
     # "SPHC-YS1"
     # "目标厚度": [3.75]
 }
 
-to_file_name = 'e:/005统计/20180117 Q500C和M750JJ统计/{line}_{grade}.xlsx'
+to_file_name = 'e:/005统计/20180209_2017全年大梁钢统计/{line}肖肖.xlsx'
 
 # =======================logic=========================
 
-month_list = range(month_start, month_end + 1)
+month_list = generate_month(201701, 201712)
 df_all = pd.DataFrame()
 for line in line_list:
     for month in month_list:
@@ -57,6 +67,10 @@ for line in line_list:
         df_all = df_all.append(df)
         print("complete! %d" % month)
 
+    # df_all.to_excel(
+    #     to_file_name.format(line=line,
+    #                         grade=selector_dict["板坯钢种"]))
+
     df_all.to_excel(
-        to_file_name.format(line=line,
-                            grade=selector_dict["钢种"]))
+        to_file_name.format(line=line)
+    )

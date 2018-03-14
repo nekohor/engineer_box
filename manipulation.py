@@ -169,7 +169,7 @@ for date_num in date_num_list:
             the_col_list = [x for x in summary.columns if how in x]
             the_series = summary.loc[std, the_col_list]
             the_series = the_series.loc[the_series > 1000]
-            the_series = the_series.loc[the_series < 4000]
+            the_series = the_series.loc[the_series < 5000]
             if the_series.shape[0] != 0:
                 plot_data.loc[std, how] = round(
                     the_series.mean() / total_line * 100, 2)
